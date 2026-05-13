@@ -31,7 +31,7 @@ L’objectif du laboratoire est de fournir un environnement réaliste permettant
 - ainsi que l’analyse d’événements de sécurité dans une architecture conteneurisée.
 # Architecture
 
-![Architecture](Architecture-proposition.png)
+![Architecture](Artcoded-proposition.png)
 # Wazuh – SIEM / HIDS
 
 ## Présentation

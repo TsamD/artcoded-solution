@@ -1,0 +1,24 @@
+services:
+  openvas:
+    image: immauss/openvas:latest
+    container_name: openvas
+    restart: unless-stopped
+
+    ports:
+      - "9392:9392"
+      - "9390:9390"
+    volumes:
+      - openvas_data:/data
+      - openvas_config:/etc/openvas
+
+    networks:
+      - artcoded
+
+volumes:
+  openvas_data:
+  openvas_config:
+
+networks:
+  artcoded:
+    external: true
+    name: artcoded_artcoded

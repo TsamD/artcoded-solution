@@ -1,88 +1,390 @@
-## Installation guide
+# OpenVAS – Artcoded SOC Lab
 
-https://openartcoded.github.io/doc/installation/compiled.html
+## Présentation
 
-## Misc
+OpenVAS (Greenbone Vulnerability Management) est utilisé dans l’infrastructure Artcoded comme scanner de vulnérabilités réseau et applicatives.
 
-### Exporting realm
+Il permet :
 
-- uncomment volumes in docker-compose dev
-  ```
-      # - ./config/keycloak-dev/export:/tmp/export
-  ```
-- run the command:
+* la détection de services exposés ;
+* l’identification de vulnérabilités et CVE ;
+* l’analyse de mauvaises configurations ;
+* le suivi des vulnérabilités dans le temps ;
+* la génération automatisée de rapports ;
+* l’envoi d’alertes par email.
 
-      ```
-      docker exec -it app-docker_keycloak_1 /opt/keycloak/bin/kc.sh export \
-      --file /tmp/export/artcoded-realm.json \
-      --realm Artcoded \
-      --users same_file
-      ```
+OpenVAS complète :
 
-  > On windows you should use "-" instead of "\_" & you can't use "\" apparently, e.g :
+* Wazuh → SIEM / logs / FIM ;
+* Trivy → scan des images Docker ;
+* Suricata → IDS réseau ;
+* Atomic Red Team → simulation d’attaques.
 
-  ```
-     docker exec -it app-docker-keycloak-1 /opt/keycloak/bin/kc.sh export --file /tmp/export/artcoded-realm.json  --realm Artcoded --users single_file
-  ```
+---
 
-### Importing realm
+# Déploiement
 
-- move the exported realm to `config/keycloak-dev/import`
+## Docker Compose
 
-- run the command:
+```yaml
+services:
+  openvas:
+    image: immauss/openvas:latest
+    container_name: openvas
+    restart: unless-stopped
 
-  ```
-  docker exec -it app-docker_keycloak_1 /opt/keycloak/bin/kc.sh import \
-  --file /tmp/import/artcoded-realm.json
-  ```
+    ports:
+      - "9392:9392"
 
-> On windows you should use "-" instead of "\_" & you can't use "\" apparently, e.g :
+    volumes:
+      - openvas_data:/data
 
-       docker exec -it app-docker-keycloak-1 /opt/keycloak/bin/kc.sh import  --file /tmp/import/artcoded-realm.json
-
-- restart the stack
-  ```
-  docker-compose restart
-  ```
-
-#### mount volume docker
-
-udisksctl mount -b /dev/sda1
-
-#### list volumes
-
-lsblk -o NAME,FSTYPE,LABEL,SIZE,MOUNTPOINT
-
-#### disable docker
-
-sudo systemctl disable docker.service docker.socket
-
-### troubleshoots
-
-- Keycloak doesn't start because of adminTheme not set:
-
-```
-drc exec  postgresql psql --username=keycloak -c "UPDATE REALM SET ADMIN_THEME='keycloak' WHERE ADMIN_THEME IS NULL;";
+volumes:
+  openvas_data:
 ```
 
-### postgres - add new user
+---
 
-```
-docker-compose exec  postgresql psql --username=keycloak -c "CREATE USER nextcloud WITH PASSWORD 'nextcloud';" \
-    -c "CREATE DATABASE nextcloud;" \
-    -c "GRANT ALL PRIVILEGES ON DATABASE nextcloud TO nextcloud;"
+# Premier démarrage
+
+⚠️ Lors du premier lancement, OpenVAS télécharge :
+
+* les feeds CVE ;
+* les NVT ;
+* les données SCAP ;
+* les CERT ;
+* les signatures.
+
+Cette étape peut prendre longtemps selon :
+
+* la bande passante ;
+* le CPU ;
+* le stockage.
+
+Pendant cette phase :
+
+* les scans sont indisponibles ;
+* l’UI peut afficher :
+
+```text
+Feed is currently syncing.
 ```
 
-### external storage sftp nextcloud
+Une fois terminé :
 
-```
-docker-compose exec cloud docker-php-ext-install ftp
-docker-compose exec cloud docker-php-ext-enable ftp
-docker-compose exec cloud apk add --update bzip2-dev
-docker-compose exec cloud docker-php-ext-install bz2
-docker-compose restart cloud
-docker-compose exec --user www-data cloud php occ config:system:set default_phone_region --value="BE"
-docker-compose exec cloud sed -i "s/opcache.interned_strings_buffer=8/opcache.interned_strings_buffer=16/g" /usr/local/etc/php/conf.d/opcache-recommended.ini |grep opcache.interned_strings_buffer /usr/local/etc/php/conf.d/opcache-recommended.ini
+* les services OpenVAS démarrent ;
+* les scans deviennent disponibles.
 
+---
+
+# Accès Web
+
+## URL
+
+```text
+http://IP_VM:9392
 ```
-# artcoded-solution
+
+Exemple :
+
+```text
+http://10.10.0.165:9392
+```
+
+⚠️ Cette instance utilise HTTP.
+
+---
+
+# Architecture réseau
+
+Le réseau Docker principal Artcoded est :
+
+```text
+172.31.0.0/16
+```
+
+OpenVAS est connecté au bridge Docker :
+
+```text
+artcoded_artcoded
+```
+
+Il peut donc scanner :
+
+* les conteneurs ;
+* les services internes ;
+* les ports exposés ;
+* les applications web ;
+* les bases de données ;
+* les services d’administration.
+
+---
+
+# Création d’une Target
+
+## Menu
+
+```text
+Configuration → Targets
+```
+
+## Paramètres utilisés
+
+### Hosts
+
+```text
+172.31.0.0/16
+```
+
+### Alive Test
+
+```text
+Consider Hosts as Alive
+```
+
+Cela évite les faux négatifs dans les réseaux Docker internes.
+
+---
+
+# Création d’une Task
+
+## Menu
+
+```text
+Scans → Tasks
+```
+
+## Configuration utilisée
+
+### Scan Config
+
+```text
+Full and fast
+```
+
+### Scanner
+
+```text
+OpenVAS Default
+```
+
+### Target
+
+```text
+artcoded
+```
+
+---
+
+# Lancement manuel
+
+Depuis :
+
+```text
+Scans → Tasks
+```
+
+Puis :
+
+```text
+Start
+```
+
+---
+
+# Planification automatique
+
+OpenVAS possède son propre scheduler intégré.
+
+## Création d’un Schedule
+
+```text
+Configuration → Schedules
+```
+
+## Exemple
+
+### Fréquence
+
+```text
+Weekly
+```
+
+### Jour
+
+```text
+Saturday
+```
+
+### Heure
+
+```text
+22:00 UTC
+```
+
+---
+
+# Association du schedule
+
+```text
+Scans → Tasks → Edit Task
+```
+
+Puis sélectionner :
+
+* le Schedule ;
+* sauvegarder.
+
+Le scan sera ensuite exécuté automatiquement.
+
+---
+
+# Rapports
+
+## Consultation
+
+```text
+Scans → Reports
+```
+
+Les rapports affichent :
+
+* CVE détectées ;
+* niveau de sévérité ;
+* ports ouverts ;
+* services ;
+* résultats détaillés ;
+* historique des scans.
+
+---
+
+# Génération de rapports personnalisés
+
+OpenVAS permet :
+
+* filtres ;
+* composition du contenu ;
+* inclusion des certificats TLS ;
+* pagination ;
+* exports.
+
+Formats possibles :
+
+* PDF ;
+* XML ;
+* TXT ;
+* HTML.
+
+---
+
+# Alertes Email
+
+OpenVAS peut envoyer automatiquement un email lorsqu’un scan est terminé.
+
+## Configuration
+
+```text
+Configuration → Alerts
+```
+
+## Fonctionnalités possibles
+
+* notification simple ;
+* inclusion du rapport ;
+* comparaison avec rapport précédent ;
+* filtres ;
+* génération automatique.
+
+---
+
+# Consommation de ressources
+
+## Pendant initialisation / scan
+
+OpenVAS peut fortement consommer :
+
+* CPU ;
+* RAM ;
+* I/O disque.
+
+Principalement :
+
+* lors des updates feeds ;
+* pendant les scans actifs ;
+* sur grands réseaux.
+
+---
+
+## Au repos
+
+Une fois :
+
+* les feeds synchronisés ;
+* les tâches terminées ;
+
+OpenVAS consomme relativement peu de ressources et peut rester allumé en permanence.
+
+---
+
+# Intégration SOC
+
+## Wazuh
+
+Complémentaire :
+
+* OpenVAS = vulnérabilités ;
+* Wazuh = événements/logs/détection.
+
+---
+
+## Trivy
+
+Complémentaire :
+
+* OpenVAS = réseau/services ;
+* Trivy = images Docker/packages/libs.
+
+---
+
+## Suricata
+
+Complémentaire :
+
+* OpenVAS = analyse proactive ;
+* Suricata = détection trafic réseau.
+
+---
+
+## Atomic Red Team
+
+Complémentaire :
+
+* Atomic = simulation ;
+* OpenVAS = vérification exposition.
+
+---
+
+# Sécurité
+
+## Recommandations
+
+Ne pas exposer OpenVAS directement sur Internet :
+
+* accès LAN uniquement ;
+* VPN ;
+* reverse proxy sécurisé ;
+* MFA ;
+* filtrage IP.
+
+---
+
+# Conclusion
+
+OpenVAS apporte :
+
+* une vision réseau globale ;
+* l’identification proactive des vulnérabilités ;
+* le suivi de l’exposition des services ;
+* l’automatisation des audits de sécurité.
+
+Dans l’infrastructure Artcoded, il constitue le composant principal de gestion des vulnérabilités du SOC lab.

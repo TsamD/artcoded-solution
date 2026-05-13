@@ -1,0 +1,11 @@
+{
+  "realm": "Artcoded",
+  "resource": "artemis-broker",
+  "auth-server-url": "http://keycloak:8080",
+  "use-resource-role-mappings": true,
+  "principal-attribute": "preferred_username",
+  "ssl-required": "external",
+  "credentials": {
+    "secret": "yDWBPJdGLB3WAg23ELtWhNpRsy0XxoPS"
+  }
+}

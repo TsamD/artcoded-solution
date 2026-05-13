@@ -1,0 +1,56 @@
+spring:
+    cloud:
+        gateway:
+            server:
+                webflux:
+                    routes:
+                        ########################################################### proxy ##########################################################################
+                        - id: yahoo_finance_chart
+                          uri: https://query1.finance.yahoo.com
+                          predicates:
+                              - Path=/proxy/yahoo-finance/chart/**
+                          filters:
+                              - RewritePath=/proxy/yahoo-finance/chart/(?<segment>.*), /v8/finance/chart/$\{segment}
+                        - id: yahoo_finance_search
+                          uri: https://query1.finance.yahoo.com
+                          predicates:
+                              - Path=/proxy/yahoo-finance/search/**
+                          filters:
+                              - RewritePath=/proxy/yahoo-finance/search(?<segment>.*), /v1/finance/search$\{segment}
+                        ########################################################### keycloak ##########################################################################
+                        - id: auth
+                          uri: http://auth.somehost.org:8080
+                          predicates:
+                              - Host=auth.somehost.org
+                        ########################################################### back-office ######################################################################
+                        - id: back-office-api
+                          uri: http://api.somehost.org
+                          predicates:
+                              - Host=backoffice.somehost.org
+                              - Path=/api/**
+                        - id: back-office-sparql-endpoint
+                          uri: http://triplestore
+                          predicates:
+                              - Host=backoffice.somehost.org
+                              - Path=/sparql/**
+                        - id: back-office
+                          uri: http://backoffice.somehost.org
+                          predicates:
+                              - Host=backoffice.somehost.org
+                        ########################################################### website #########################################################################
+                        # - id: website-api
+                        #   uri: http://api.somehost.org
+                        #   predicates:
+                        #     - Host=somehost.org
+                        #     - Path=/api/**
+                        # - id: website-sparql-endpoint
+                        #   uri: http://triplestore
+                        #   predicates:
+                        #     - Host=somehost.org
+                        #     - Path=/sparql/**
+                        #   filters:
+                        #     - RewritePath=/sparql(?<segment>.*), /public/sparql$\{segment}
+                        - id: website
+                          uri: http://somehost.org
+                          predicates:
+                              - Host=somehost.org

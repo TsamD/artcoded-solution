@@ -1,0 +1,23 @@
+services:
+  ####### Suricata #######
+  suricata:
+    build:
+      context: suricata/.
+    network_mode: host
+    cap_add:
+     - NET_ADMIN
+     - NET_RAW
+    volumes:
+      - ./config/suricata/suricata.yaml:/etc/suricata/suricata.yaml
+      - ./data/suricata/rules:/var/lib/suricata/rules
+      - ./data/suricata/logs:/var/log/suricata/
+    command: /bin/bash -c "suricata-update && suricata -c /etc/suricata/suricata.yaml -i br_artcoded && tail -f /var/log/cron.log"
+networks:
+  artcoded:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.31.0.0/16
+    driver_opts:
+      com.docker.network.bridge.name: br_artcoded

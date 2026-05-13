@@ -1,0 +1,82 @@
+<ossec_config>
+  <global>
+    <logall>yes</logall>
+    <logall_json>yes</logall_json>
+  </global>
+  <client>
+    <server>
+      <address>wazuh.manager</address>
+      <port>1514</port>
+      <protocol>tcp</protocol>
+    </server>
+    <config-profile>ubuntu, 22.04</config-profile>
+    <notify_time>10</notify_time>
+    <time-reconnect>60</time-reconnect>
+    <auto_restart>yes</auto_restart>
+    <crypto_method>aes</crypto_method>
+  </client>
+
+  <localfile>
+    <log_format>json</log_format>
+    <location>/var/log/suricata/eve.json</location>
+  </localfile>
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/zeek/conn.log</location>
+  </localfile>
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/zeek/dns.log</location>
+  </localfile>
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/zeek/http.log</location>
+  </localfile>
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/zeek/ssl.log</location>
+  </localfile>
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/zeek/weird.log</location>
+  </localfile>
+    <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/auth.log</location>
+  </localfile>
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/syslog</location>
+    </localfile>
+    <wodle name="syscollector">
+      <disabled>no</disabled>
+      <interval>1h</interval>
+      <scan_on_start>yes</scan_on_start>
+      <hardware>yes</hardware>
+      <os>yes</os>
+      <network>yes</network>
+      <packages>yes</packages>
+      <ports all="no">yes</ports>
+      <processes>yes</processes>
+    </wodle>
+    <syscheck>
+      <disabled>no</disabled>
+      <frequency>43200</frequency>
+      <scan_on_start>yes</scan_on_start>
+      <directories check_all="yes">/etc,/usr/bin,/usr/sbin</directories>
+      <directories check_all="yes">/bin,/sbin,/boot</directories>
+      <ignore>/etc/mtab</ignore>
+      <ignore>/etc/hosts.deny</ignore>
+    </syscheck>
+    <rootcheck>
+      <disabled>no</disabled>
+      <check_unixaudit>yes</check_unixaudit>
+      <check_files>yes</check_files>
+      <check_trojans>yes</check_trojans>
+      <check_dev>yes</check_dev>
+      <system_audit>/var/ossec/etc/shared/system_audit.txt</system_audit>
+    </rootcheck>
+    <active-response>
+      <disabled>no</disabled>
+    </active-response>
+  </ossec_config>

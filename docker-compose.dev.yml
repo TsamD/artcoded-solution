@@ -1,0 +1,143 @@
+services:
+    sftp:
+        ports:
+            - "2222:22"
+        volumes:
+            - ./data/sftp/dev/ssh_host_keys.pub:/home/peppol/.ssh/keys/id_rsa.pub:ro
+    file-service:
+        image: nbittich/file-service:latest
+        env_file:
+            - ./env-files/dev/file-service.env
+        ports:
+            - "8089:80"
+    postgresql:
+        env_file:
+            - ./env-files/dev/postgresql.env
+    mongo-express:
+        image: mongo-express
+        networks:
+            artcoded:
+        restart: always
+        env_file:
+            - ./env-files/dev/express.env
+        ports:
+            - 8081:8081
+    keycloak:
+        #  image: nbittich/keycloak:latest
+        env_file:
+            - ./env-files/dev/keycloak.env
+        user:
+            root
+            #ports:
+            #- 8080:8080
+        networks:
+            artcoded:
+                aliases:
+                    - auth.somehost.org
+        volumes:
+            - ./config/keycloak-dev/export:/tmp/export
+            - ./config/keycloak-dev/import:/tmp/import
+            # - ./config/keycloak-dev:/tmp/realms
+    api-backend:
+        image: nbittich/api-backend:latest
+        volumes:
+            - ./data/sftp/dev/ssh_host_keys:/peppol/id_rsa:ro
+        ports:
+            - 9000:80
+        links:
+            - greenmail
+        networks:
+            artcoded:
+                aliases:
+                    - api.somehost.org
+        env_file:
+            - ./env-files/dev/backend.env
+    back-office:
+        image: nbittich/back-office:latest
+        networks:
+            artcoded:
+                aliases:
+                    - backoffice.somehost.org
+        env_file:
+            - ./env-files/dev/backoffice.env
+
+    website:
+        image: nbittich/websitev2:latest
+        networks:
+            artcoded:
+                aliases:
+                    - somehost.org
+        env_file:
+            - ./env-files/dev/website.env
+    mongo:
+        env_file:
+            - ./env-files/dev/mongo.env
+        ports:
+            - 27018:27017
+    artemis:
+        volumes:
+            - ./config/artemis/keycloak_dev.json:/var/lib/artemis-instance/etc/keycloak.json
+        ports:
+            - 8161:8161
+            - 61616:61616
+    redis:
+        ports:
+            - "6379:6379"
+    api-gateway:
+        image: nbittich/api-gateway:latest
+        env_file:
+            - ./env-files/dev/gateway.env
+
+    tlsproxy:
+        restart: "always"
+        build:
+            context: ./nginx-dev/.
+        networks:
+            artcoded:
+        ports:
+            - "443:443"
+            - "8883:8883"
+        volumes:
+            - ./config/tlsproxy/http:/etc/nginx/conf.d
+            - ./config/tlsproxy/tcp:/etc/nginx/tcpconf.d
+            - ./config/tlsproxy/nginx.conf:/etc/nginx/nginx.conf
+            - ./config/tlsproxy/mime.types:/etc/nginx/mime.types
+            - ./data/nextcloud:/var/www/html
+
+    triplestore:
+        image: nbittich/triplestore:latest
+        ports:
+            - 8888:80
+        env_file:
+            - ./env-files/dev/triplestore.env
+    greenmail:
+        image: greenmail/standalone:1.6.7
+        restart: always
+        networks:
+            artcoded:
+                aliases:
+                    - greenmail.somehost.org
+        env_file:
+            - ./env-files/dev/greenmail.env
+        ports:
+            - "8996:8080"
+    roundcube:
+        image: roundcube/roundcubemail:latest
+        depends_on:
+            - greenmail
+        networks:
+            artcoded:
+                aliases:
+                    - mail.somehost.org
+        env_file:
+            - ./env-files/dev/roundcube.env
+
+    cloud-cron:
+        env_file:
+            - ./env-files/dev/cloud.env
+    cloud:
+        env_file:
+            - ./env-files/dev/cloud.env
+
+networks:
+    artcoded:

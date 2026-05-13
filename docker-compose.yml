@@ -1,0 +1,153 @@
+services:
+    ####### MongoDB #######
+    mongo:
+        image: mongo:7
+        networks:
+            artcoded:
+        restart: always
+        volumes:
+            - ./data/db:/data/db
+    ####### Keycloak #######
+    postgresql:
+        restart: always
+        networks:
+            artcoded:
+        image: "postgres:14"
+        volumes:
+            - ./data/keycloak-postgres:/var/lib/postgresql/data
+    keycloak:
+        restart: always
+        image: nbittich/keycloak:26.4.0
+        networks:
+            artcoded:
+        command: start --optimized --proxy-headers xforwarded
+    ####### Redis #######
+    redis:
+        image: valkey/valkey:7.2-alpine
+        restart: always
+        networks:
+            artcoded:
+        command: redis-server  --appendonly yes
+        volumes:
+            - ./data/redis:/data
+    ####### New file service #######
+    file-service:
+        image: nbittich/file-service:2026.1.6
+        environment:
+            TMP_FS_PATH: "/temporary"
+        tmpfs:
+            - /temporary:size=4096m
+        volumes:
+            - ./data/backend/files:/astorage
+        networks:
+            artcoded:
+        restart: always
+    ####### Artemis #######
+    artemis:
+        image: nbittich/artemis:2026.0.0
+        networks:
+            artcoded:
+        restart: always
+        volumes:
+            - ./config/artemis/login.config:/var/lib/artemis-instance/etc/login.config
+            - ./config/artemis/broker.xml:/var/lib/artemis-instance/etc/broker.xml
+            - ./data/artemis:/var/lib/artemis-instance/data
+            - ./data/artemis/journal:/var/lib/artemis-instance/data/journal
+        environment:
+            ARTEMIS_JVM_ARGS: "-XX:+UseCompactObjectHeaders"
+        user: root
+    ####### Api Gateway #######
+    api-gateway:
+        image: nbittich/api-gateway:2026.1.0
+        restart: always
+        networks:
+            artcoded:
+        depends_on:
+            - api-backend
+            - back-office
+            - website
+            - triplestore
+        volumes:
+            - ./config/gateway:/usr/config
+    ####### Api Backend #######
+    api-backend:
+        image: nbittich/api-backend:2026.5.16
+        restart: always
+        networks:
+            artcoded:
+        tmpfs:
+            - /temporary:size=4096m
+        volumes:
+            - ./data/backend:/var/artcoded/data
+            - ./data/backend/temp:/var/undertow/upload
+            - ./config/backend:/usr/config
+            - ./config/scripts:/var/artcoded_scripts
+        depends_on:
+            - sftp
+    ####### BACK OFFICE #######
+    back-office:
+        image: nbittich/back-office:v2026.5.9
+        restart: always
+        networks:
+            artcoded:
+        volumes:
+            - ./config/back-office/nginx.conf:/etc/nginx/nginx.conf
+    ####### Triplestore #######
+    triplestore:
+        networks:
+            artcoded:
+        image: nbittich/triplestore:2026.1.0
+        restart: always
+        volumes:
+            - ./data/tdb2:/triplestore
+            - ./data/migrations:/migrations
+    ####### Website #######
+    website:
+        image: nbittich/websitev2:2026.0.1
+        restart: always
+        networks:
+            artcoded:
+    ####### SFTP       #######
+    sftp:
+        networks:
+            artcoded:
+        image: nbittich/sftp:2026.0.0
+        volumes:
+            - ./data/peppol/ftp/invoices:/home/peppol/invoices
+            - ./data/peppol/ftp/expenses/:/home/peppol/expenses
+        command: peppol::1001
+    ###### Yopass ######
+    yopass:
+        image: jhaals/yopass
+        restart: always
+        command: "--database=redis --redis=redis://redis:6379 --port 80"
+        depends_on:
+            - redis
+        networks:
+            artcoded:
+    ###### Nextcloud ######
+    cloud:
+        restart: always
+        image: nextcloud:31-fpm-alpine
+        volumes:
+            - ./data/nextcloud:/var/www/html
+        depends_on:
+            - postgresql
+            - redis
+        networks:
+            artcoded:
+    cloud-cron:
+        image: nextcloud:31-fpm-alpine
+        restart: always
+        volumes:
+            - ./../nextcloud-data:/var/www/html
+        entrypoint: /cron.sh
+        networks:
+            artcoded:
+        depends_on:
+            - postgresql
+            - redis
+            - cloud
+
+networks:
+    artcoded:

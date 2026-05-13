@@ -1,3 +1,196 @@
+# Artcoded SOC Lab
+## Présentation générale
+
+Artcoded SOC Lab est une infrastructure de cybersécurité self-hosted conçue pour simuler un environnement d’entreprise moderne segmenté et supervisé.
+
+Le projet combine plusieurs composants de sécurité offensifs et défensifs afin de centraliser :
+
+- la détection d’intrusion ;
+- l’analyse des vulnérabilités ;
+- la supervision de sécurité ;
+- le monitoring réseau ;
+- la collecte de logs ;
+- la génération de rapports de sécurité.
+
+L’infrastructure repose principalement sur Docker et plusieurs réseaux segmentés afin d’isoler les différents services applicatifs, IAM, bases de données et composants de sécurité.
+
+Les principales solutions intégrées sont :
+
+- **Wazuh** : SIEM / HIDS / centralisation des logs ;
+- **Suricata** : IDS réseau et analyse du trafic ;
+- **OpenVAS** : scanner de vulnérabilités ;
+- **Trivy** : analyse de vulnérabilités des images Docker ;
+- **Atomic Red Team** : simulation contrôlée de techniques d’attaque ;
+- **Nextcloud / Keycloak / PostgreSQL / MongoDB / Redis** : services applicatifs du laboratoire.
+
+L’objectif du laboratoire est de fournir un environnement réaliste permettant :
+- l’apprentissage ;
+- le test ;
+- la démonstration ;
+- la supervision ;
+- ainsi que l’analyse d’événements de sécurité dans une architecture conteneurisée.
+# Architecture
+
+![Architecture](Architecture-proposition.png)
+# Wazuh – SIEM / HIDS
+
+## Présentation
+
+Wazuh est le composant central du SOC Lab Artcoded.
+
+Il permet :
+
+* la centralisation des logs ;
+* la supervision de sécurité ;
+* l’analyse des événements ;
+* la détection d’intrusions ;
+* le monitoring des agents ;
+* l’intégration IDS ;
+* la corrélation d’événements ;
+* la visualisation des alertes.
+
+Dans l’infrastructure Artcoded, Wazuh est utilisé avec :
+
+* Suricata ;
+* Docker ;
+* OpenVAS ;
+* les logs système ;
+* les services applicatifs.
+
+---
+
+# Architecture Wazuh
+
+L’infrastructure Wazuh repose sur :
+
+* Wazuh Manager ;
+* Wazuh Indexer ;
+* Wazuh Dashboard ;
+* Wazuh Agent.
+
+---
+
+# Intégration Suricata
+
+Suricata génère les événements réseau dans :
+
+```text
+/var/log/suricata/eve.json
+```
+
+Ces événements sont :
+
+```text
+Suricata
+→ eve.json
+→ Wazuh Agent
+→ Wazuh Manager
+→ Filebeat
+→ Wazuh Indexer
+→ Dashboard
+```
+
+Les alertes sont ensuite visualisables dans :
+
+```text
+Dashboard Management / Discover
+```
+
+ou dans les dashboards personnalisés.
+
+---
+
+# Dashboard personnalisé
+
+Un dashboard exporté est fourni dans :
+
+```text
+config/wazuh/wazuh_dashboard/home.ndjson
+```
+
+Ce dashboard contient :
+
+* visualisation des alertes ;
+* timeline ;
+* statistiques ;
+* monitoring ;
+* événements Suricata.
+
+---
+
+# Import du dashboard
+
+## Menu
+
+```text
+Dashboard Management → Saved Objects
+```
+
+## Import
+
+Importer :
+
+```text
+config/wazuh/wazuh_dashboard/home.ndjson
+```
+
+Puis :
+
+```text
+Import
+```
+
+Le dashboard sera automatiquement ajouté à Wazuh Dashboard.
+
+---
+
+# Accès Wazuh Dashboard
+
+## URL
+
+```text
+https://IP_VM:8443
+```
+
+Exemple :
+
+```text
+https://10.10.0.165:8443
+```
+
+---
+
+# Découverte des événements
+
+## Discover
+
+Les événements sont consultables dans :
+
+```text
+Discover
+```
+
+Index utilisés :
+
+```text
+wazuh-alerts-*
+```
+
+---
+
+# Types d’événements collectés
+
+Le SOC peut centraliser :
+
+* logs système ;
+* événements Suricata ;
+* alertes IDS ;
+* logs Docker ;
+* logs applicatifs ;
+* événements sécurité ;
+* détections personnalisées.
+
+
 # OpenVAS – Artcoded SOC Lab
 
 ## Présentation
@@ -47,7 +240,8 @@ volumes:
 
 # Premier démarrage
 
-⚠️ Lors du premier lancement, OpenVAS télécharge :
+> **WARNING**
+> Lors du premier lancement, OpenVAS télécharge :
 
 * les feeds CVE ;
 * les NVT ;
@@ -91,7 +285,8 @@ Exemple :
 http://10.10.0.165:9392
 ```
 
-⚠️ Cette instance utilise HTTP.
+> **WARNING**
+> Cette instance utilise HTTP.
 
 ---
 
